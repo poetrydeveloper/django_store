@@ -9,7 +9,7 @@ https://docs.djangoproject.com/en/5.2/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
 """
-
+import os
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -37,6 +37,9 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+# Ваши приложения
+    'goods.apps.GoodsConfig',
+    'files.apps.FilesConfig',
 ]
 
 MIDDLEWARE = [
@@ -80,6 +83,8 @@ DATABASES = {
 }
 
 
+
+
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
 
@@ -120,3 +125,21 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
+LANGUAGE_CODE = 'ru-RU'  # Измените с 'en-us' на 'ru-RU'
+
+TIME_ZONE = 'Europe/Moscow'  # Установите вашу временную зону
+
+USE_I18N = True  # Должно быть True для поддержки перевода
+USE_L10N = True  # Локализация форматов чисел и дат
+EXTRA_LANG_INFO = {
+    'ru': {
+        'bidi': False,
+        'code': 'ru',
+        'name': 'Russian',
+        'name_local': 'Русский',
+    },
+}
