@@ -1,0 +1,6 @@
+manage.py|9eebd152029c69e58458f7fd483cb89e
+store\asgi.py|1416bdced500213fbb65b3b4a380db5a
+store\settings.py|65dac395e21e2ccafc8bd67f670840f9
+store\urls.py|717e93e9bde64b3656b9a2bae79b7d81
+store\wsgi.py|1bc8c67e2d5bd7ec934521173242158a
+store\__init__.py|d41d8cd98f00b204e9800998ecf8427e
