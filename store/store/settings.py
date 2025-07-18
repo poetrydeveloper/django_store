@@ -37,9 +37,10 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-# Ваши приложения
     'goods.apps.GoodsConfig',
     'files.apps.FilesConfig',
+    'unit.apps.UnitConfig',
+    'warehouse.apps.WarehouseConfig',
 ]
 
 MIDDLEWARE = [
