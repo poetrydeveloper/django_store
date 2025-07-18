@@ -40,7 +40,7 @@ INSTALLED_APPS = [
     'goods.apps.GoodsConfig',
     'files.apps.FilesConfig',
     'unit.apps.UnitConfig',
-    'warehouse.apps.WarehouseConfig',
+    'warehouse.apps.WarehouseConfig'
 ]
 
 MIDDLEWARE = [

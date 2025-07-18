@@ -11,15 +11,6 @@ class ProductUnit(models.Model):
         ('lost', 'Утерян'),
         ('transferred', 'Передан'),
     ]
-
-class ProductUnit(models.Model):
-    STATUS_CHOICES = [
-        ('in_request', 'В заявке'),
-        ('in_delivery', 'В поставке'),
-        ('in_store', 'В магазине'),
-        ('sold', 'Продан'),
-    ]
-
     serial_number = models.CharField(
         'Серийный номер',
         max_length=100,
