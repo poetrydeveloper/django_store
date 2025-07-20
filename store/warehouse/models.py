@@ -1,3 +1,4 @@
+# app warehouse/models
 from django.db import models
 from django.core.validators import MinValueValidator  # Или используйте строковую ссылку 'goods.Product'
 
