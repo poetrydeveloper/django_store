@@ -1,5 +1,10 @@
 # app unit/models
 from django.db import models
+from django.core.exceptions import ValidationError
+import random
+from datetime import datetime
+
+
 
 
 class ProductUnit(models.Model):
@@ -12,6 +17,26 @@ class ProductUnit(models.Model):
         ('lost', 'Утерян'),
         ('transferred', 'Передан'),
     ]
+
+    @staticmethod
+    def generate_serial_number(product):
+        """Генерация гарантированно уникального серийного номера"""
+        max_attempts = 100
+        base_prefix = f"RF-{product.id}-"
+
+        for attempt in range(max_attempts):
+            timestamp = datetime.now().strftime("%d%m:%H%M%S")
+            # Добавляем микросекунды и attempt для уникальности
+            unique_part = f"{datetime.now().microsecond:06d}{attempt:02d}"[:8]
+            full_serial = f"{base_prefix}{timestamp}-{unique_part}"
+
+            if not ProductUnit.objects.filter(serial_number=full_serial).exists():
+                return full_serial
+
+        raise ValidationError(
+            f"Не удалось сгенерировать уникальный номер после {max_attempts} попыток"
+        )
+
     serial_number = models.CharField(
         'Серийный номер',
         max_length=100,
@@ -60,7 +85,6 @@ class ProductUnit(models.Model):
         blank=True,
         help_text='Цена продажи (если товар продан)'
     )
-
     class Meta:
         verbose_name = 'Единица товара'
         verbose_name_plural = 'Единицы товаров'
@@ -93,3 +117,10 @@ class ProductUnit(models.Model):
         if self.status == 'sold' and self.sale_date:
             return f"{base_str} - {self.sale_date}"
         return base_str
+
+    def save(self, *args, **kwargs):
+        if not self.serial_number:
+            if not self.product:
+                raise ValidationError("Нельзя создать единицу товара без указания товара")
+            self.serial_number = ProductUnit.generate_serial_number(self.product)
+        super().save(*args, **kwargs)

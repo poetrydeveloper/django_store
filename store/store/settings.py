@@ -42,9 +42,11 @@ INSTALLED_APPS = [
     'unit.apps.UnitConfig',
     'warehouse.apps.WarehouseConfig',
     'sales.apps.SalesConfig',
+    'debug_toolbar',
 ]
 
 MIDDLEWARE = [
+    'debug_toolbar.middleware.DebugToolbarMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -143,5 +145,15 @@ EXTRA_LANG_INFO = {
         'code': 'ru',
         'name': 'Russian',
         'name_local': 'Русский',
+    },
+}
+INTERNAL_IPS = [
+    '127.0.0.1',
+]
+
+DEBUG_TOOLBAR_CONFIG = {
+    'SHOW_TOOLBAR_CALLBACK': lambda request: True,
+    'DISABLE_PANELS': {
+        'debug_toolbar.panels.redirects.RedirectsPanel',
     },
 }
