@@ -1,9 +1,8 @@
 # app warehouse/models
 from django.db import models
-from django.core.validators import MinValueValidator  # Или используйте строковую ссылку 'goods.Product'
-
 from unit.models import ProductUnit
-
+from django.core.validators import MinValueValidator
+from django.core.exceptions import ValidationError
 
 class Customer(models.Model):
     """Клиент (покупатель)"""
@@ -63,7 +62,6 @@ class Delivery(models.Model):
 
 
 class DeliveryItem(models.Model):
-    """Позиция поставки с привязкой к конкретным единицам товара"""
     delivery = models.ForeignKey(
         'warehouse.Delivery',
         on_delete=models.CASCADE,
@@ -77,19 +75,28 @@ class DeliveryItem(models.Model):
     )
     quantity_received = models.PositiveIntegerField(
         'Количество получено',
-        validators=[MinValueValidator(1)]
+        validators=[MinValueValidator(1)],
+        default=1
     )
     price_per_unit = models.DecimalField(
         'Цена за единицу',
         max_digits=10,
         decimal_places=2
     )
+    request_item = models.ForeignKey(
+        'warehouse.RequestItem',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='delivery_items',
+        verbose_name='Связанная заявка'
+    )
     received_units = models.ManyToManyField(
         'unit.ProductUnit',
+        related_name='delivery_items_received',  # Уникальное имя для обратной связи
         verbose_name='Полученные единицы',
         blank=True
     )
-    notes = models.TextField('Примечания', blank=True)
 
     class Meta:
         verbose_name = 'Позиция поставки'
@@ -98,6 +105,15 @@ class DeliveryItem(models.Model):
 
     def __str__(self):
         return f"{self.product.name} x {self.quantity_received} (Поставка #{self.delivery.id})"
+
+    def clean(self):
+        """Валидация данных перед сохранением"""
+        if self.quantity_received is None:
+            raise ValidationError({'quantity_received': 'Укажите количество'})
+        if self.price_per_unit is None:
+            raise ValidationError({'price_per_unit': 'Укажите цену'})
+        if self.quantity_received <= 0:
+            raise ValidationError({'quantity_received': 'Количество должно быть положительным'})
 
     def save(self, *args, **kwargs):
         """Автоматическое обновление статусов ProductUnit при сохранении"""
@@ -108,6 +124,13 @@ class DeliveryItem(models.Model):
             unit.status = 'in_delivery'
             unit.delivery_item = self
             unit.save()
+
+    @property
+    def total_price(self):
+        """Вычисляемая общая сумма"""
+        if self.quantity_received and self.price_per_unit:
+            return self.quantity_received * self.price_per_unit
+        return None
 
 class Request(models.Model):
     """Заявка (заголовок)"""
@@ -132,6 +155,14 @@ class RequestItem(models.Model):
         related_name='items',
         verbose_name='Заявка'
     )
+    supplier = models.ForeignKey(
+        Supplier,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True
+    )
+    quantity_received = models.PositiveIntegerField(default=0)
+
     product = models.ForeignKey(
         'goods.Product',
         on_delete=models.PROTECT,
