@@ -46,10 +46,50 @@ class ProductUnit(models.Model):
         'Дата создания',
         auto_now_add=True
     )
+    sale_date = models.DateField(
+        'Дата продажи',
+        null=True,
+        blank=True,
+        help_text='Фактическая дата продажи (если товар продан)'
+    )
+    sale_price = models.DecimalField(
+        'Цена продажи',
+        max_digits=10,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text='Цена продажи (если товар продан)'
+    )
 
     class Meta:
         verbose_name = 'Единица товара'
         verbose_name_plural = 'Единицы товаров'
+        indexes = [
+            models.Index(fields=['status', 'product']),
+            models.Index(fields=['sale_date']),
+        ]
+
+    def safe_mark_as_sold(self, sale_date=None, sale_price=None):
+        """
+        Безопасное изменение статуса на 'sold' без обязательных параметров
+        Новый метод - можно вызывать даже без указания даты/цены
+        """
+        self.status = 'sold'
+        if sale_date:
+            self.sale_date = sale_date
+        if sale_price:
+            self.sale_price = sale_price
+        self.save()
+        return self
+
+    def get_purchase_price(self):
+        """Возвращает цену закупки (из DeliveryItem)"""
+        if self.delivery_item:
+            return self.delivery_item.price_per_unit
+        return None
 
     def __str__(self):
-        return f"{self.serial_number} ({self.get_status_display()})"
+        base_str = f"{self.serial_number} ({self.get_status_display()})"
+        if self.status == 'sold' and self.sale_date:
+            return f"{base_str} - {self.sale_date}"
+        return base_str

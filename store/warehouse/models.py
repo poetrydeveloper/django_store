@@ -2,6 +2,9 @@
 from django.db import models
 from django.core.validators import MinValueValidator  # Или используйте строковую ссылку 'goods.Product'
 
+from unit.models import ProductUnit
+
+
 class Customer(models.Model):
     """Клиент (покупатель)"""
     name = models.CharField('Наименование', max_length=255)
@@ -157,8 +160,18 @@ class RequestItem(models.Model):
         verbose_name_plural = 'Позиции заявок'
 
     def save(self, *args, **kwargs):
-        self.item_total_amount = self.quantity_ordered * self.price_per_unit
+        # Сначала сохраняем объект
         super().save(*args, **kwargs)
+
+        # Если это заказ клиента и нужно создать единицы товара
+        if self.is_customer_order and not self.product.productunit_set.exists():
+            for i in range(self.quantity_ordered):
+                ProductUnit.objects.create(
+                    product=self.product,
+                    serial_number=f"{self.product.code}-{i + 1:03d}",  # Генерация серийного номера
+                    status='in_request',
+                    request_item=self
+                )
 
     def __str__(self):
         return f"{self.product.name} x {self.quantity_ordered}"
