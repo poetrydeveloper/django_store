@@ -20,7 +20,6 @@ class CustomerAdmin(admin.ModelAdmin):
 
     def notes_short(self, obj):
         return obj.notes[:50] + '...' if obj.notes else '-'
-
     notes_short.short_description = 'Примечания (кратко)'
 
 
@@ -33,7 +32,6 @@ class SupplierAdmin(admin.ModelAdmin):
 
     def notes_short(self, obj):
         return obj.notes[:50] + '...' if obj.notes else '-'
-
     notes_short.short_description = 'Примечания (кратко)'
 
 
@@ -45,7 +43,6 @@ class DeliveryItemInline(admin.TabularInline):
 
     def total_price(self, obj):
         return obj.quantity_received * obj.price_per_unit
-
     total_price.short_description = 'Сумма'
 
 
@@ -59,7 +56,6 @@ class DeliveryAdmin(admin.ModelAdmin):
 
     def save_related(self, request, form, formsets, change):
         super().save_related(request, form, formsets, change)
-        # Обновляем общую сумму поставки
         total = sum(
             item.quantity_received * item.price_per_unit
             for item in form.instance.items.all()
@@ -82,22 +78,51 @@ class RequestItemInline(admin.TabularInline):
 
     def item_total(self, obj):
         return obj.quantity_ordered * obj.price_per_unit
-
     item_total.short_description = 'Сумма'
 
 
 @admin.register(Request)
 class RequestAdmin(admin.ModelAdmin):
-    list_display = ('id', 'created_at', 'is_completed', 'notes_short')
+    list_display = ('request_id_formatted', 'created_at', 'is_completed', 'notes_short', 'items_count')
     list_filter = ('is_completed', 'created_at')
-    search_fields = ('notes',)
+    search_fields = ('notes', 'id')
     date_hierarchy = 'created_at'
     inlines = [RequestItemInline]
 
+    def request_id_formatted(self, obj):
+        request_id = f"Z-{obj.id:03d}"  # Форматируем ID отдельно
+        date_str = obj.created_at.strftime("%d.%m.%Y %H:%M")
+        return format_html(
+            '<b>{}</b> <span style="color: #666;">{}</span>',
+            request_id,
+            date_str
+        )
+    request_id_formatted.short_description = 'Номер заявки'
+    request_id_formatted.admin_order_field = 'id'
+
     def notes_short(self, obj):
         return obj.notes[:50] + '...' if obj.notes else '-'
-
     notes_short.short_description = 'Примечания (кратко)'
+
+    def items_count(self, obj):
+        count = obj.items.count()
+        return format_html(
+            '<span style="color: {};">{}</span>',
+            'green' if count > 0 else 'gray',
+            count if count > 0 else 'пусто'
+        )
+    items_count.short_description = 'Товаров'
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).prefetch_related('items')
+
+    def render_change_form(self, request, context, *args, **kwargs):
+        if not kwargs.get('obj'):
+            context.update({
+                'show_save_and_add_another': False,
+                'show_save_and_continue': False
+            })
+        return super().render_change_form(request, context, *args, **kwargs)
 
 
 @admin.register(DeliveryItem)
@@ -137,13 +162,11 @@ class DeliveryItemAdmin(admin.ModelAdmin):
             obj.delivery.id,
             f"Поставка #{obj.delivery.id}"
         )
-
     delivery_link.short_description = 'Поставка'
     delivery_link.admin_order_field = 'delivery'
 
     def total_price(self, obj):
         return obj.quantity_received * obj.price_per_unit
-
     total_price.short_description = 'Сумма'
 
     def units_list(self, obj):
@@ -154,20 +177,17 @@ class DeliveryItemAdmin(admin.ModelAdmin):
             f'<a href="/admin/unit/productunit/{unit.id}/change/">{unit.serial_number}</a>'
             for unit in units
         ))
-
     units_list.short_description = 'Список серийных номеров'
 
     def save_model(self, request, obj, form, change):
-        """Автоматическая привязка свободных юнитов товара"""
         super().save_model(request, obj, form, change)
-
-        if not change:  # Только для новых записей
+        if not change:
             available_units = obj.product.productunit_set.filter(
                 status='in_request',
                 delivery_item__isnull=True
             )[:obj.quantity_received]
-
             obj.received_units.set(available_units)
+
 
 @admin.register(RequestItem)
 class RequestItemAdmin(admin.ModelAdmin):
@@ -187,12 +207,10 @@ class RequestItemAdmin(admin.ModelAdmin):
         return format_html(
             '<a href="/admin/warehouse/request/{}/change/">{}</a>',
             obj.request.id,
-            f"Заявка #{obj.request.id}"
+            f"Z-{obj.request.id:03d}"
         )
-
     request_link.short_description = 'Заявка'
 
     def item_total(self, obj):
         return obj.quantity_ordered * obj.price_per_unit
-
     item_total.short_description = 'Сумма'
