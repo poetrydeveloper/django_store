@@ -156,7 +156,7 @@ class RequestAdmin(BaseAdmin):
     list_display = (
         'id_formatted',
         'created_at',
-        'is_completed',
+        'completion_status',  # Новая колонка вместо is_completed
         'total_sum',
         'items_count'
     )
@@ -165,7 +165,7 @@ class RequestAdmin(BaseAdmin):
     date_hierarchy = 'created_at'
 
     def id_formatted(self, obj):
-        return format_html("<b>Z-{}</b>", f"{obj.id:03d}")  # Форматируем число до передачи в format_html
+        return format_html("<b>Z-{}</b>", f"{obj.id:03d}")
 
     id_formatted.short_description = 'Номер'
     id_formatted.admin_order_field = 'id'
@@ -175,8 +175,40 @@ class RequestAdmin(BaseAdmin):
             total=Sum(F('quantity_ordered') * F('price_per_unit'))
         )['total']
         return f"{result:.2f} ₽" if result else "—"
+
     total_sum.short_description = 'Общая сумма'
 
     def items_count(self, obj):
         return obj.items.count()
+
     items_count.short_description = 'Позиций'
+
+    def completion_status(self, obj):
+        # Получаем общее количество заказанных и поставленных единиц
+        items_data = obj.items.aggregate(
+            total_ordered=Sum('quantity_ordered'),
+            total_received=Sum('delivery_items__quantity_received')
+        )
+
+        total_ordered = items_data['total_ordered'] or 0
+        total_received = items_data['total_received'] or 0
+
+        if total_ordered == 0:
+            return "Нет данных"
+
+        if total_received >= total_ordered:
+            return format_html(
+                '<span style="color: green;">✓ Полностью поставлено</span>'
+            )
+        elif total_received > 0:
+            return format_html(
+                '<span style="color: orange;">↻ {}/{} (поставлено частично)</span>',
+                total_received, total_ordered
+            )
+        else:
+            return format_html(
+                '<span style="color: gray;">⌛ Не поставлено</span>'
+            )
+
+    completion_status.short_description = 'Статус выполнения'
+    completion_status.admin_order_field = 'is_completed'
