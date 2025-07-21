@@ -1,3 +1,4 @@
+# this  main app project store\settings
 """
 Django settings for store project.
 

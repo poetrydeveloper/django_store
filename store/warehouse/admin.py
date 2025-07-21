@@ -63,9 +63,12 @@ class DeliveryItemForm(forms.ModelForm):
         product = cleaned_data.get('product')
         quantity_received = cleaned_data.get('quantity_received', 0)
 
+        # Добавлена проверка на корректность quantity_received
+        if not quantity_received or quantity_received <= 0:
+            raise forms.ValidationError("Укажите положительное количество")
+
         if product and quantity_received:
             try:
-                # Проверяем возможность генерации номеров
                 for _ in range(quantity_received):
                     ProductUnit.generate_serial_number(product)
             except ValidationError as e:

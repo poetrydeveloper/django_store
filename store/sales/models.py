@@ -81,7 +81,8 @@ class SaleItem(models.Model):
 
     def save(self, *args, **kwargs):
         if not self.cancelled:
-            # При продаже меняем статус единицы на "sold"
+            if self.product_unit.status not in ['in_store']:
+                raise ValidationError("Нельзя продать товар с текущим статусом")
             self.product_unit.status = 'sold'
             self.product_unit.save()
         super().save(*args, **kwargs)

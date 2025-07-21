@@ -121,7 +121,7 @@ class DeliveryItem(models.Model):
 
         # Обновляем статус всех привязанных единиц
         for unit in self.received_units.all():
-            unit.status = 'in_delivery'
+            unit.status = 'in_store'
             unit.delivery_item = self
             unit.save()
 
@@ -191,18 +191,18 @@ class RequestItem(models.Model):
         verbose_name_plural = 'Позиции заявок'
 
     def save(self, *args, **kwargs):
-        # Сначала сохраняем объект
         super().save(*args, **kwargs)
-
-        # Если это заказ клиента и нужно создать единицы товара
-        if self.is_customer_order and not self.product.productunit_set.exists():
-            for i in range(self.quantity_ordered):
-                ProductUnit.objects.create(
-                    product=self.product,
-                    serial_number=f"{self.product.code}-{i + 1:03d}",  # Генерация серийного номера
-                    status='in_request',
-                    request_item=self
-                )
+        if self.is_customer_order:
+            try:
+                for i in range(self.quantity_ordered):
+                    ProductUnit.objects.create(
+                        product=self.product,
+                        serial_number=f"{self.product.code}-{i + 1:03d}",
+                        status='in_request',
+                        request_item=self
+                    )
+            except ValidationError as e:
+                raise ValidationError(f"Ошибка создания единицы товара: {str(e)}")
 
     def __str__(self):
         return f"{self.product.name} x {self.quantity_ordered}"
